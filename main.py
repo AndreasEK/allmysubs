@@ -13,11 +13,11 @@
 # limitations under the License.
 
 # [START app]
-import pdb; pdb.set_trace();
 import logging
 import os
-import flask
 import requests
+import flask
+import json
 
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
@@ -28,6 +28,7 @@ appengine.monkeypatch()
 
 # [START imports]
 from flask import Flask, render_template, request
+from flask_bootstrap import Bootstrap
 # [END imports]
 
 # This variable specifies the name of a file that contains the OAuth 2.0
@@ -43,6 +44,7 @@ API_VERSION = 'v3'
 
 # [START create_app]
 app = Flask(__name__)
+Bootstrap(app)
 # [END create_app]
 
 # Replace this with a truly secret
@@ -51,11 +53,11 @@ app.secret_key = 'l\x1c.\xe6X\x9cq\xdb\x93w\xcc!\xf5]\x8d\x91\xb2\xfe|Y\xb6\xe4\
 
 @app.route('/')
 def index():
-    return print_index_table()
+    return render_template('home.html')
 
+@app.route('/subs')
+def show_all_subs():
 
-@app.route('/test')
-def test_api_request():
     if 'credentials' not in flask.session:
         return flask.redirect('authorize')
 
@@ -66,14 +68,31 @@ def test_api_request():
     youtube = googleapiclient.discovery.build(
         API_SERVICE_NAME, API_VERSION, credentials=credentials)
 
-    channels = youtube.subscriptions().list(mine=True, part='snippet', maxResults=50).execute()
+    channels_request = youtube.subscriptions().list(
+        mine=True,
+        part='snippet',
+        maxResults=50,
+        fields='kind,etag,nextPageToken,prevPageToken,pageInfo,items/snippet/channelId,items/snippet/title,items/snippet/thumbnails/medium/url'
+    )
+
+    all_subscribed_channels = []
+
+    while channels_request is not None:
+        print("***")
+        subscribed_channels = channels_request.execute()
+
+        all_subscribed_channels += subscribed_channels.get('items', [])
+
+        # Do something with the activities
+
+        channels_request = youtube.subscriptions().list_next(channels_request, subscribed_channels)
 
     # Save credentials back to session in case access token was refreshed.
     # ACTION ITEM: In a production app, you likely want to save these
     #              credentials in a persistent database instead.
     flask.session['credentials'] = credentials_to_dict(credentials)
 
-    return flask.jsonify(**channels)
+    return flask.jsonify(*all_subscribed_channels)
 
 
 @app.route('/authorize')
@@ -117,7 +136,7 @@ def oauth2callback():
     credentials = flow.credentials
     flask.session['credentials'] = credentials_to_dict(credentials)
 
-    return flask.redirect(flask.url_for('test_api_request'))
+    return flask.redirect(flask.url_for('show_all_subs'))
 
 
 @app.route('/revoke')
@@ -135,17 +154,16 @@ def revoke():
 
     status_code = getattr(revoke, 'status_code')
     if status_code == 200:
-        return('Credentials successfully revoked.' + print_index_table())
+        return('Credentials successfully revoked.')
     else:
-        return('An error occurred.' + print_index_table())
+        return('An error occurred.')
 
 
 @app.route('/clear')
 def clear_credentials():
     if 'credentials' in flask.session:
         del flask.session['credentials']
-    return ('Credentials have been cleared.<br><br>' +
-            print_index_table())
+    return ('Credentials have been cleared.')
 
 
 def credentials_to_dict(credentials):
@@ -155,38 +173,6 @@ def credentials_to_dict(credentials):
             'client_id': credentials.client_id,
             'client_secret': credentials.client_secret,
             'scopes': credentials.scopes}
-
-def print_index_table():
-    return ('<table>' +
-            '<tr><td><a href="/test">Test an API request</a></td>' +
-            '<td>Submit an API request and see a formatted JSON response. ' +
-            '    Go through the authorization flow if there are no stored ' +
-            '    credentials for the user.</td></tr>' +
-            '<tr><td><a href="/authorize">Test the auth flow directly</a></td>' +
-            '<td>Go directly to the authorization flow. If there are stored ' +
-            '    credentials, you still might not be prompted to reauthorize ' +
-            '    the application.</td></tr>' +
-            '<tr><td><a href="/revoke">Revoke current credentials</a></td>' +
-            '<td>Revoke the access token associated with the current user ' +
-            '    session. After revoking credentials, if you go to the test ' +
-            '    page, you should see an <code>invalid_grant</code> error.' +
-            '</td></tr>' +
-            '<tr><td><a href="/clear">Clear Flask session credentials</a></td>' +
-            '<td>Clear the access token currently stored in the user session. ' +
-            '    After clearing the token, if you <a href="/test">test the ' +
-            '    API request</a> again, you should go back to the auth flow.' +
-            '</td></tr></table>')
-
-
-if __name__ == '__main__':
-    # When running locally, disable OAuthlib's HTTPs verification.
-    # ACTION ITEM for developers:
-    #     When running in production *do not* leave this option enabled.
-    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '0'
-
-    # Specify a hostname and port that are set as a valid redirect URI
-    # for your API project in the Google API Console.
-    app.run('localhost', 8080, debug=True)
 
 @app.errorhandler(500)
 def server_error(e):

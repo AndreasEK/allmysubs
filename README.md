@@ -15,6 +15,12 @@ Before running or deploying this application, install the dependencies using
 
 For more information, see the [App Engine Standard README](../../README.md)
 
+# Run locally
+
+```$
+dev_appserver.py --env_var OAUTHLIB_INSECURE_TRANSPORT=1 .
+```
+
 # Documentation
 
 * Getting Started with Flask on App Engine Standard Environment:

@@ -1,27 +1,25 @@
-# App Engine Standard Flask Tutorial App
+# allmysubs.com
 
-[![Open in Cloud Shell][shell_img]][shell_link]
+YouTube is known for optimizing the subscription feed. Some users don't like
+that and long for a chronologically ordered video list of all their subscriptions.
 
-[shell_img]: http://gstatic.com/cloudssh/images/open-btn.png
-[shell_link]: https://console.cloud.google.com/cloudshell/open?git_repo=https://github.com/GoogleCloudPlatform/python-docs-samples&page=editor&open_in_editor=appengine/standard/flask/tutorial/README.md
+This is the source code for the website [allmysubs.com](https://allmysubs.com)
 
-This sample shows how to use [Flask](http://flask.pocoo.org/) to handle
-requests, forms, templates, and static files on Google App Engine Standard.
+# Notes
 
 Before running or deploying this application, install the dependencies using
 [pip](http://pip.readthedocs.io/en/stable/):
 
+    source env/bin/activate
     pip install -t lib -r requirements.txt
 
-For more information, see the [App Engine Standard README](../../README.md)
+## Run locally
 
-# Run locally
+Disable https when developling locally:
 
-```$
-dev_appserver.py --env_var OAUTHLIB_INSECURE_TRANSPORT=1 .
-```
+    dev_appserver.py --env_var OAUTHLIB_INSECURE_TRANSPORT=1 .
 
-# Documentation
+## Documentation
 
 * Getting Started with Flask on App Engine Standard Environment:
   https://cloud.google.com/appengine/docs/standard/python/getting-started/python-standard-env

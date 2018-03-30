@@ -72,13 +72,12 @@ def show_all_subs():
         mine=True,
         part='snippet',
         maxResults=50,
-        fields='kind,etag,nextPageToken,prevPageToken,pageInfo,items/snippet/channelId,items/snippet/title,items/snippet/thumbnails/medium/url'
+        fields='kind,etag,nextPageToken,prevPageToken,pageInfo,items/snippet/resourceId,items/snippet/title,items/snippet/thumbnails/medium/url'
     )
 
     all_subscribed_channels = []
 
     while channels_request is not None:
-        print("***")
         subscribed_channels = channels_request.execute()
 
         all_subscribed_channels += subscribed_channels.get('items', [])
@@ -92,7 +91,8 @@ def show_all_subs():
     #              credentials in a persistent database instead.
     flask.session['credentials'] = credentials_to_dict(credentials)
 
-    return flask.jsonify(*all_subscribed_channels)
+#    return flask.jsonify(*all_subscribed_channels)
+    return render_template('subfeed.html', channels=all_subscribed_channels)
 
 
 @app.route('/authorize')

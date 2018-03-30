@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Recent Uploads from allmysubs</title>
+</head>
+<body>
+
+<!--
+[
+  {
+    "snippet": {
+      "channelId": "UC7A-blDnT40wfmEu45iYFMw",
+      "thumbnails": {
+        "medium": {
+          "url": "https://yt3.ggpht.com/-OsAizo9rOho/AAAAAAAAAAI/AAAAAAAAAAA/z5Oa7gkP1Jw/s240-c-k-no-mo-rj-c0xffffff/photo.jpg"
+        }
+      },
+      "title": "Razzortainment"
+    }
+  },
+  ...
+]
+
+-->
+
+{% for channel in channels %}
+<div><a href="http://www.youtube.com/channel/{{ channel.snippet.resourceId.channelId }}"><img src="{{ channel.snippet.thumbnails.medium.url }}"/> {{ channel.snippet.title }}</a> </div>
+{% endfor %}
+</body>
+</html>

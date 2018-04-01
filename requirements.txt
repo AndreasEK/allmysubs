@@ -7,3 +7,4 @@ google-auth-httplib2
 requests
 requests_toolbelt
 flask-bootstrap
+google-cloud-datastore

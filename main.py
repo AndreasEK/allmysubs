@@ -13,11 +13,12 @@
 # limitations under the License.
 
 # [START app]
+from __future__ import print_function
 import logging
 import os
 import requests
 import flask
-import json
+import dateutil.parser
 
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
@@ -75,24 +76,50 @@ def show_all_subs():
         fields='kind,etag,nextPageToken,prevPageToken,pageInfo,items/snippet/resourceId,items/snippet/title,items/snippet/thumbnails/medium/url'
     )
 
+    all_upload_playlists = []
     all_subscribed_channels = []
 
     while channels_request is not None:
-        subscribed_channels = channels_request.execute()
+        subscribed_channels_result = channels_request.execute()
 
-        all_subscribed_channels += subscribed_channels.get('items', [])
+        subscribed_channels = subscribed_channels_result.get('items', [])
+        all_subscribed_channels += subscribed_channels
 
-        # Do something with the activities
+        subscribed_channel_ids = []
 
-        channels_request = youtube.subscriptions().list_next(channels_request, subscribed_channels)
+        for subscribed_channel in subscribed_channels:
+            subscribed_channel_ids.append(subscribed_channel['snippet']['resourceId']['channelId'])
+
+        print("Found new subscriptions: ", len(subscribed_channel_ids))
+
+        uploads_playlist_result = youtube.channels().list(
+            part='contentDetails',
+            id=",".join(subscribed_channel_ids)).execute()
+
+        for upload in uploads_playlist_result.get('items', []):
+            all_upload_playlists.append(upload['contentDetails']['relatedPlaylists']['uploads'])
+
+        channels_request = youtube.subscriptions().list_next(channels_request, subscribed_channels_result)
+
+    print("Found upload playlists: ", all_upload_playlists)
+
+    all_new_videos = []
+    for upload_playlist in all_upload_playlists:
+        video_response = youtube.playlistItems().list(
+            part='snippet',
+            playlistId=upload_playlist).execute()
+        all_new_videos += video_response.get('items', [])
+
+    all_sorted_videos = sorted(all_new_videos, reverse=True, key=lambda x: x['snippet']['publishedAt'])
 
     # Save credentials back to session in case access token was refreshed.
     # ACTION ITEM: In a production app, you likely want to save these
     #              credentials in a persistent database instead.
     flask.session['credentials'] = credentials_to_dict(credentials)
 
-#    return flask.jsonify(*all_subscribed_channels)
-    return render_template('subfeed.html', channels=all_subscribed_channels)
+    #    return flask.jsonify(*all_subscribed_channels)
+    return render_template('subfeed.html', videos=all_sorted_videos)
+    #return flask.jsonify(*all_sorted_videos)
 
 
 @app.route('/authorize')

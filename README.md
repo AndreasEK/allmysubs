@@ -17,7 +17,14 @@ Before running or deploying this application, install the dependencies using
 
 Disable https when developling locally:
 
-    dev_appserver.py --env_var OAUTHLIB_INSECURE_TRANSPORT=1 .
+1. Start datastore emulator
+
+        gcloud beta emulators datastore start
+        $(gcloud beta emulators datastore env-init)
+    
+1. Start application
+
+        dev_appserver.py --env_var OAUTHLIB_INSECURE_TRANSPORT=1 .
 
 ## Documentation
 

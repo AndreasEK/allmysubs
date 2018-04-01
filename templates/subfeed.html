@@ -6,26 +6,9 @@
 </head>
 <body>
 
-<!--
-[
-  {
-    "snippet": {
-      "channelId": "UC7A-blDnT40wfmEu45iYFMw",
-      "thumbnails": {
-        "medium": {
-          "url": "https://yt3.ggpht.com/-OsAizo9rOho/AAAAAAAAAAI/AAAAAAAAAAA/z5Oa7gkP1Jw/s240-c-k-no-mo-rj-c0xffffff/photo.jpg"
-        }
-      },
-      "title": "Razzortainment"
-    }
-  },
-  ...
-]
-
--->
-
-{% for channel in channels %}
-<div><a href="http://www.youtube.com/channel/{{ channel.snippet.resourceId.channelId }}"><img src="{{ channel.snippet.thumbnails.medium.url }}"/> {{ channel.snippet.title }}</a> </div>
+{% for video in videos %}
+<div><a href="https://www.youtube.com/watch?v={{ video.snippet.resourceId.videoId }}"><img src="{{ video.snippet.thumbnails.medium.url }}"/> {{ video.snippet.title }}</a>, published on
+{{ video.snippet.publishedAt }} by <a href="https://www.youtube.com/channel/{{ video.snippet.channelId }}">{{ video.snippet.channelTitle }}</a></div>
 {% endfor %}
 </body>
 </html>

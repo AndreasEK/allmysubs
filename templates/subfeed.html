@@ -1,14 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>
+     (adsbygoogle = window.adsbygoogle || []).push({
+          google_ad_client: "ca-pub-6264717904787140",
+          enable_page_level_ads: true
+     });
+
+    </script>
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-116679590-1"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'UA-116679590-1');
+
+    </script>
+
     <meta charset="UTF-8">
     <title>Recent Uploads from allmysubs</title>
 </head>
 <body>
 
 {% for video in videos %}
-<div><a href="https://www.youtube.com/watch?v={{ video.snippet.resourceId.videoId }}"><img src="{{ video.snippet.thumbnails.medium.url }}"/> {{ video.snippet.title }}</a>, published on
-{{ video.snippet.publishedAt }} by <a href="https://www.youtube.com/channel/{{ video.snippet.channelId }}">{{ video.snippet.channelTitle }}</a></div>
+<div><a href="https://www.youtube.com/watch?v={{ video.snippet.resourceId.videoId }}"><img
+        src="{{ video.snippet.thumbnails.medium.url }}"/> {{ video.snippet.title }}</a>, published on
+    {{ video.snippet.publishedAt }} by <a href="https://www.youtube.com/channel/{{ video.snippet.channelId }}">{{
+        video.snippet.channelTitle }}</a></div>
 {% endfor %}
 </body>
 </html>

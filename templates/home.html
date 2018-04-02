@@ -1,4 +1,27 @@
 {% extends "bootstrap/base.html" %}
+
+{% block head %}
+{{super()}}
+<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+<script>
+  (adsbygoogle = window.adsbygoogle || []).push({
+    google_ad_client: "ca-pub-6264717904787140",
+    enable_page_level_ads: true
+  });
+
+</script>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-116679590-1"></script>
+<script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'UA-116679590-1');
+
+    </script>
+{% endblock %}
+
 {% block title %}allmysubs.video{% endblock %}
 
 {% block navbar %}
@@ -10,7 +33,7 @@
 {% block content %}
 <h1>allmysubs</h1>
 <div>This page helps you to stay up to date with the channels you have subscribed to.
-It will list all videos from the last seven days in chronolical order.
+    It will list all videos from the last seven days in chronolical order.
 </div>
 <div>
     View videos from <a href="/subs">all my subscriptions</a>.

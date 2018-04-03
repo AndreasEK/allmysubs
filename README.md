@@ -38,3 +38,5 @@ Disable https when developling locally:
   https://developers.google.com/api-client-library/python/apis/youtube/v3
 * Fixing requests on Google App Engine
   https://toolbelt.readthedocs.io/en/latest/adapters.html#appengineadapter
+* Material Design Bootstrap
+  https://mdbootstrap.com/corporate-website-lesson-1/

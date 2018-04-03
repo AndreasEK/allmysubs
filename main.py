@@ -20,6 +20,8 @@ import requests
 import flask
 import dateutil.parser
 
+# TODO: Use https://github.com/miguelgrinberg/Flask-Moment
+
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
 import googleapiclient.discovery
@@ -206,4 +208,9 @@ def server_error(e):
     # Log the error and stacktrace.
     logging.exception('An error occurred during a request.')
     return 'An internal error occurred.', 500
+
+@app.template_filter('datetimeformat')
+def datetimeformat(value, format='%Y-%m-%d at %H:%M'):
+    parsed_date = dateutil.parser.parse(value)
+    return parsed_date.strftime(format)
 # [END app]

@@ -16,15 +16,25 @@
 from __future__ import print_function
 import logging
 import os
+
+import httplib2
 import requests
 import flask
 import dateutil.parser
+import datetime
 
-# TODO: Use https://github.com/miguelgrinberg/Flask-Moment
+# TODO: "3 days ago" - use https://github.com/miguelgrinberg/Flask-Moment
+# TODO: i18n - use https://pythonhosted.org/Flask-Babel/
 
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
+import google_auth_oauthlib.helpers
 import googleapiclient.discovery
+from google.auth.transport.requests import AuthorizedSession
+
+from oauth2client.client import GoogleCredentials
+
+#google_auth_credentials = credentials_from_session(oauth2session)
 
 from requests_toolbelt.adapters import appengine
 appengine.monkeypatch()
@@ -65,8 +75,16 @@ def show_all_subs():
         return flask.redirect('authorize')
 
     # Load credentials from the session.
-    credentials = google.oauth2.credentials.Credentials(
-        **flask.session['credentials'])
+    credentials = credentials_from_session()
+
+    print("Credentials expiry: ", credentials.expiry)
+    print("Credentials expired? ", credentials.expired)
+
+    if credentials.expired:
+        print("Credentials have been expired, refreshing")
+        refresh_request = google.auth.transport.requests.Request(session = AuthorizedSession(credentials))
+        credentials.refresh(refresh_request)
+        dump(credentials)
 
     youtube = googleapiclient.discovery.build(
         API_SERVICE_NAME, API_VERSION, credentials=credentials)
@@ -92,7 +110,7 @@ def show_all_subs():
         for subscribed_channel in subscribed_channels:
             subscribed_channel_ids.append(subscribed_channel['snippet']['resourceId']['channelId'])
 
-        print("Found new subscriptions: ", len(subscribed_channel_ids))
+        print("Found subscriptions: ", len(subscribed_channel_ids))
 
         uploads_playlist_result = youtube.channels().list(
             part='contentDetails',
@@ -117,9 +135,8 @@ def show_all_subs():
     # Save credentials back to session in case access token was refreshed.
     # ACTION ITEM: In a production app, you likely want to save these
     #              credentials in a persistent database instead.
-    flask.session['credentials'] = credentials_to_dict(credentials)
+    save_credentials_to_session(credentials)
 
-    #    return flask.jsonify(*all_subscribed_channels)
     return render_template('subfeed.html', videos=all_sorted_videos)
     #return flask.jsonify(*all_sorted_videos)
 
@@ -137,7 +154,8 @@ def authorize():
         # re-prompting the user for permission. Recommended for web server apps.
         access_type='offline',
         # Enable incremental authorization. Recommended as a best practice.
-        include_granted_scopes='true')
+        include_granted_scopes='true',
+    prompt='consent')
 
     # Store the state so the callback can verify the auth server response.
     flask.session['state'] = state
@@ -162,10 +180,14 @@ def oauth2callback():
     # Store credentials in the session.
     # ACTION ITEM: In a production app, you likely want to save these
     #              credentials in a persistent database instead.
-    credentials = flow.credentials
-    flask.session['credentials'] = credentials_to_dict(credentials)
+    save_credentials_to_session(flow.credentials)
 
     return flask.redirect(flask.url_for('show_all_subs'))
+
+
+def dump(obj):
+    for attr in dir(obj):
+        print("obj.%s = %r" % (attr, getattr(obj, attr)))
 
 
 @app.route('/revoke')
@@ -195,13 +217,28 @@ def clear_credentials():
     return ('Credentials have been cleared.')
 
 
+def save_credentials_to_session(credentials):
+    credentials.expiry = credentials.expiry - datetime.timedelta(hours=1)
+    flask.session['credentials'] = credentials_to_dict(credentials)
+    flask.session['token_expiry'] = credentials.expiry
+
+
 def credentials_to_dict(credentials):
     return {'token': credentials.token,
             'refresh_token': credentials.refresh_token,
             'token_uri': credentials.token_uri,
             'client_id': credentials.client_id,
             'client_secret': credentials.client_secret,
-            'scopes': credentials.scopes}
+            'scopes': credentials.scopes
+            }
+
+
+def credentials_from_session():
+    credentials = google.oauth2.credentials.Credentials(
+        **flask.session['credentials'])
+    credentials.expiry = flask.session['token_expiry']
+    return credentials
+
 
 @app.errorhandler(500)
 def server_error(e):

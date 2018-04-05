@@ -99,15 +99,15 @@
 <!--Main Navigation-->
 
 <!--Main layout-->
-<main class="mt-5">
+<main class="" style="margin-top: 4rem">
 
     <!--Main container-->
     <div class="container">
 
         <!--Grid row-->
-        <div class="row ">
+        <div class="row">
             {% for video in videos %}
-            <div class="col-6">
+            <div class="col-3">
                 <!--Card-->
                 <div class="card mb-4">
 
@@ -161,8 +161,15 @@
 
                     <!--Card image-->
                     <div class="view overlay">
-                        <img src="{{ video.snippet.thumbnails.standard.url }}"
-                             class="img-fluid embed-responsive-16by9" alt="{{ video.snippet.title }}">
+                        <img src="
+                        {% if 'maxres' in video.snippet.thumbnails %}
+                        {{ video.snippet.thumbnails.maxres.url }}
+                        {% elif 'medium' in video.snippet.thumbnails %}
+                        {{ video.snippet.thumbnails.medium.url }}
+                        {% else %}
+                        {{ video.snippet.thumbnails.default.url }}
+                        {% endif %}"
+                             class="img-fluid" alt="{{ video.snippet.title }}">
                         <a href="https://www.youtube.com/watch?v={{ video.snippet.resourceId.videoId }}">
                             <div class="mask rgba-white-slight"></div>
                         </a>
@@ -171,16 +178,16 @@
                     <!--Card content-->
                     <div class="card-body">
                         <!--Title-->
-                        <h4 class="card-title">{{ video.snippet.title }}</h4>
+                        <h5 class="card-title">{{ video.snippet.title|truncate(50) }}</h5>
                         <!--Text-->
-                        <p class="card-text"> {{ video.snippet.description|truncate(200) }}.</p>
+                        <p class="card-text"> {{ video.snippet.description|truncate(100) }}.</p>
                         <p class="card-text">
                             {{ video.snippet.publishedAt|datetimeformat }} by <a
                                     href="https://www.youtube.com/channel/{{ video.snippet.channelId }}">
                                 {{ video.snippet.channelTitle }}</a>.
                         </p>
                         <a href="https://www.youtube.com/watch?v={{ video.snippet.resourceId.videoId }}"
-                           class="btn btn-cyan">WATCH</a>
+                           class="btn btn-cyan float-right">WATCH</a>
                     </div>
 
                 </div>

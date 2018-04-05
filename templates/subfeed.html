@@ -107,7 +107,7 @@
         <!--Grid row-->
         <div class="row">
             {% for video in videos %}
-            <div class="col-3">
+            <div class="col-sm-6 col-md-6 col-lg-4 col-xl-3">
                 <!--Card-->
                 <div class="card mb-4">
 
@@ -170,7 +170,7 @@
                         {{ video.snippet.thumbnails.default.url }}
                         {% endif %}"
                              class="img-fluid" alt="{{ video.snippet.title }}">
-                        <a href="https://www.youtube.com/watch?v={{ video.snippet.resourceId.videoId }}">
+                        <a href="https://www.youtube.com/watch?v={{ video.snippet.resourceId.videoId }}" target="_blank">
                             <div class="mask rgba-white-slight"></div>
                         </a>
                     </div>
@@ -186,7 +186,7 @@
                                     href="https://www.youtube.com/channel/{{ video.snippet.channelId }}">
                                 {{ video.snippet.channelTitle }}</a>.
                         </p>
-                        <a href="https://www.youtube.com/watch?v={{ video.snippet.resourceId.videoId }}"
+                        <a href="https://www.youtube.com/watch?v={{ video.snippet.resourceId.videoId }}" target="_blank"
                            class="btn btn-cyan float-right">WATCH</a>
                     </div>
 

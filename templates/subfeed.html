@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Home{% endblock %}
+{% block title %}Subscription feed for {{ channel.snippet.title }}{% endblock %}
 {% block head %}
 {{ super() }}
 {% endblock %}
@@ -23,7 +23,7 @@
                 </div>
             </div>
             <!--Grid row-->
-            <div class="row">
+            <div class="row equal-height">
                 {% for video in videos %}
                 <div class="col-sm-6 col-md-6 col-lg-4 col-xl-3">
                     <!--Card-->
@@ -58,7 +58,7 @@
                                 {{ video.snippet.channelTitle }}</a>.
                             </p>
                             <a href="https://www.youtube.com/watch?v={{ video.snippet.resourceId.videoId }}" target="_blank"
-                               class="btn btn-cyan float-right">WATCH</a>
+                               class="card-link float-right">WATCH</a>
                         </div>
 
                     </div>

@@ -42,7 +42,7 @@ appengine.monkeypatch()
 
 # [START imports]
 from flask import Flask, render_template, request
-from flask_bootstrap import Bootstrap
+from flask_moment import Moment
 # [END imports]
 
 # This variable specifies the name of a file that contains the OAuth 2.0
@@ -58,7 +58,7 @@ API_VERSION = 'v3'
 
 # [START create_app]
 app = Flask(__name__)
-Bootstrap(app)
+moment = Moment(app)
 # [END create_app]
 
 # Replace this with a truly secret
@@ -71,9 +71,10 @@ def index():
 
 
 def get_upload_playlist(playlist, all_new_videos, youtube):
-    all_new_videos += youtube.playlistItems().list(
-        part='snippet',
-        playlistId=playlist).execute().get('items', [])
+    new_videos = youtube.playlistItems().list(part='snippet', playlistId=playlist).execute().get('items', [])
+    for video in new_videos:
+        video['snippet']['publishedAt_parsed'] = dateutil.parser.parse(video['snippet']['publishedAt'])
+    all_new_videos += new_videos
     print("Added videos for playlist: ", playlist)
     pass
 
@@ -270,8 +271,4 @@ def server_error(e):
     logging.exception('An error occurred during a request.')
     return 'An internal error occurred.', 500
 
-@app.template_filter('datetimeformat')
-def datetimeformat(value, format='%Y-%m-%d at %H:%M'):
-    parsed_date = dateutil.parser.parse(value)
-    return parsed_date.strftime(format)
 # [END app]

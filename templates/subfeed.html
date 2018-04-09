@@ -48,10 +48,9 @@
                             <h5 class="card-title">{{ video.snippet.title|truncate(50) }}</h5>
                             <!--Text-->
                             <p class="card-text"> {{ video.snippet.description|truncate(100) }}.</p>
-                            <p class="card-text">
-                                {{ video.snippet.publishedAt|datetimeformat }} by <a
+                            <p class="card-text"><a
                                     href="https://www.youtube.com/channel/{{ video.snippet.channelId }}">
-                                {{ video.snippet.channelTitle }}</a>.
+                                {{ video.snippet.channelTitle }}</a> {{ moment(video.snippet.publishedAt_parsed).fromNow() }}.
                             </p>
                         </div>
                         <div class="card-footer">

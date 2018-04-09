@@ -22,6 +22,7 @@ import requests
 import flask
 import dateutil.parser
 import datetime
+from threading import Thread
 
 # TODO: "3 days ago" - use https://github.com/miguelgrinberg/Flask-Moment
 # TODO: i18n - use https://pythonhosted.org/Flask-Babel/
@@ -68,6 +69,15 @@ app.secret_key = 'l\x1c.\xe6X\x9cq\xdb\x93w\xcc!\xf5]\x8d\x91\xb2\xfe|Y\xb6\xe4\
 def index():
     return render_template('home.html')
 
+
+def get_upload_playlist(playlist, all_new_videos, youtube):
+    all_new_videos += youtube.playlistItems().list(
+        part='snippet',
+        playlistId=playlist).execute().get('items', [])
+    print("Added videos for playlist: ", playlist)
+    pass
+
+
 @app.route('/subs')
 def show_all_subs():
 
@@ -84,10 +94,15 @@ def show_all_subs():
         print("Credentials have been expired, refreshing")
         refresh_request = google.auth.transport.requests.Request(session = AuthorizedSession(credentials))
         credentials.refresh(refresh_request)
-        dump(credentials)
 
     youtube = googleapiclient.discovery.build(
         API_SERVICE_NAME, API_VERSION, credentials=credentials)
+
+    active_channel_response = youtube.channels().list(
+        mine=True,
+        part='snippet'
+    ).execute()
+    active_channel = active_channel_response.get('items')[0]
 
     channels_request = youtube.subscriptions().list(
         mine=True,
@@ -123,12 +138,20 @@ def show_all_subs():
 
     print("Found upload playlists: ", all_upload_playlists)
 
+
     all_new_videos = []
+    threads = []
+
+    # In this case 'urls' is a list of urls to be crawled.
     for upload_playlist in all_upload_playlists:
-        video_response = youtube.playlistItems().list(
-            part='snippet',
-            playlistId=upload_playlist).execute()
-        all_new_videos += video_response.get('items', [])
+        process = Thread(args=[upload_playlist, all_new_videos, youtube], target = get_upload_playlist)
+        process.start()
+        threads.append(process)
+
+    # We now pause execution on the main thread by 'joining' all of our started threads.
+    # This ensures that each has finished processing the urls.
+    for process in threads:
+        process.join()
 
     all_sorted_videos = sorted(all_new_videos, reverse=True, key=lambda x: x['snippet']['publishedAt'])
 
@@ -137,8 +160,9 @@ def show_all_subs():
     #              credentials in a persistent database instead.
     save_credentials_to_session(credentials)
 
-    return render_template('subfeed.html', videos=all_sorted_videos)
+    return render_template('subfeed.html', videos=all_sorted_videos, channel = active_channel)
     #return flask.jsonify(*all_sorted_videos)
+    #return flask.jsonify(active_channel)
 
 
 @app.route('/authorize')

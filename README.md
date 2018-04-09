@@ -40,3 +40,5 @@ Disable https when developling locally:
   https://toolbelt.readthedocs.io/en/latest/adapters.html#appengineadapter
 * Material Design Bootstrap
   https://mdbootstrap.com/corporate-website-lesson-1/
+* Multi-Threading 
+  https://www.shanelynn.ie/using-python-threading-for-multiple-results-queue/

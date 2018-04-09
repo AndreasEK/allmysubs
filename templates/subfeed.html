@@ -23,6 +23,7 @@
   });
 
 
+
     </script>
 
     <!-- Global site tag (gtag.js) - Google Analytics -->
@@ -32,6 +33,7 @@
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
         gtag('config', 'UA-116679590-1');
+
 
 
     </script>
@@ -48,7 +50,7 @@
         <div class="container">
 
             <!-- Navbar brand -->
-            <a class="navbar-brand" href="#">allmysubs</a>
+            <a class="navbar-brand" href="/">allmysubs</a>
 
             <!-- Collapse button -->
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#basicExampleNav"
@@ -104,6 +106,11 @@
     <!--Main container-->
     <div class="container">
 
+        <div class="row">
+            <div class="col-12">
+                <h1>Hello, {{ channel.snippet.title }}</h1>
+            </div>
+        </div>
         <!--Grid row-->
         <div class="row">
             {% for video in videos %}
@@ -170,7 +177,8 @@
                         {{ video.snippet.thumbnails.default.url }}
                         {% endif %}"
                              class="img-fluid" alt="{{ video.snippet.title }}">
-                        <a href="https://www.youtube.com/watch?v={{ video.snippet.resourceId.videoId }}" target="_blank">
+                        <a href="https://www.youtube.com/watch?v={{ video.snippet.resourceId.videoId }}"
+                           target="_blank">
                             <div class="mask rgba-white-slight"></div>
                         </a>
                     </div>
@@ -183,8 +191,8 @@
                         <p class="card-text"> {{ video.snippet.description|truncate(100) }}.</p>
                         <p class="card-text">
                             {{ video.snippet.publishedAt|datetimeformat }} by <a
-                                    href="https://www.youtube.com/channel/{{ video.snippet.channelId }}">
-                                {{ video.snippet.channelTitle }}</a>.
+                                href="https://www.youtube.com/channel/{{ video.snippet.channelId }}">
+                            {{ video.snippet.channelTitle }}</a>.
                         </p>
                         <a href="https://www.youtube.com/watch?v={{ video.snippet.resourceId.videoId }}" target="_blank"
                            class="btn btn-cyan float-right">WATCH</a>

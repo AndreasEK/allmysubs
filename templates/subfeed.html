@@ -4,11 +4,7 @@
 {{ super() }}
 {% endblock %}
 
-{% block navbar %}
 {% set active_page = "subs" %}
-{{ super() }}
-{% endblock %}
-
 
 {% block content %}
     <!--Main layout-->
@@ -57,6 +53,8 @@
                                     href="https://www.youtube.com/channel/{{ video.snippet.channelId }}">
                                 {{ video.snippet.channelTitle }}</a>.
                             </p>
+                        </div>
+                        <div class="card-footer">
                             <a href="https://www.youtube.com/watch?v={{ video.snippet.resourceId.videoId }}" target="_blank"
                                class="card-link float-right">WATCH</a>
                         </div>

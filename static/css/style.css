@@ -1,4 +1,6 @@
 /* Your custom styles */
+
+/* See https://gist.github.com/stormwild/773bd6c77130ec16ba379c88ed02e877 */
 .row.equal-height {
     display: flex;
     flex-wrap: wrap;
@@ -10,4 +12,10 @@
 
 .card {
     flex: 1;
+}
+
+.card-footer {
+    padding: .75rem 1.25rem;
+    background-color: inherit;
+    border-top: inherit;
 }

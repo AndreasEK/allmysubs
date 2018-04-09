@@ -43,7 +43,7 @@
             ('/', 'home', 'Home'),
             ('/subs', 'subs', 'Subfeed')
         ] -%}
-        {% set active_page = active_page|default('index') -%}
+        {% set active_page = active_page|default('home') -%}
 
         <!--Navbar-->
         <nav class="navbar navbar-expand-lg navbar-dark orange fixed-top">
@@ -51,7 +51,7 @@
                 {% block navbar %}
 
                 <!-- Navbar brand -->
-                <a class="navbar-brand" href="#">allmysubs</a>
+                <a class="navbar-brand" href="/">allmysubs</a>
 
                 <!-- Collapse button -->
                 <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#basicExampleNav"

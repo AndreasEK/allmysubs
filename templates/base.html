@@ -41,12 +41,13 @@
 
         {% set navigation_bar = [
             ('/', 'home', 'Home'),
-            ('/subs', 'subs', 'Subfeed')
+            ('/subs', 'subs', 'Subfeed'),
+            ('/about', 'about', 'About')
         ] -%}
         {% set active_page = active_page|default('home') -%}
 
         <!--Navbar-->
-        <nav class="navbar navbar-expand-lg navbar-dark orange fixed-top">
+        <nav class="navbar navbar-expand-lg navbar-dark orange sticky-top">
             <div class="container">
                 {% block navbar %}
 
@@ -82,8 +83,12 @@
     </header>
     <!--Main Navigation-->
 
-    {% block content %}
-    {% endblock %}
+    <!--Main layout-->
+    <main style="padding-top: 56px">
+        {% block content %}
+        {% endblock %}
+    </main>
+    <!--Main layout-->
 
     <!--Footer-->
     <footer class="page-footer text-center text-md-left font-small orange pt-4 mt-4">
@@ -94,23 +99,33 @@
 
                 <!--First column-->
                 <div class="col-md-6 pb-3">
-                    <h5 class="text-uppercase">Footer Content</h5>
-                    <p>Here you can use rows and columns here to organize your footer content.</p>
+                    <h5 class="text-uppercase">Links</h5>
+                    <ul class="list">
+                        <li>
+                            <a href="mailto:andreas.ebbertkarroum@gmail.com">Contact</a>
+                        </li>
+                        <li>
+                            <a href="https://allmysubs.fider.io/" target="_blank">Feedback</a>
+                        </li>
+                        <li>
+                            <a href="https://github.com/AndreasEK/allmysubs" target="_blank">Sources on GitHub</a>
+                        </li>
+                        <li>
+                            <a href="/clear">Clear</a> or <a href="/revoke">revoke</a> your credentials.
+                        </li>
+                    </ul>
                 </div>
                 <!--/.First column-->
 
                 <!--Second column-->
                 <div class="col-md-6 pb-3">
-                    <h5 class="text-uppercase">Links</h5>
-                    <ul class="list-unstyled">
-                        <li>
-                            <a href="#!">Link 1</a>
-                        </li>
-                        <li>
-                            <a href="#!">Link 2</a>
-                        </li>
+                    <h5 class="text-uppercase">Imprint</h5>
+                    <p> Andreas Ebbert-Karroum <br/>
+                        Clevinghausstraße 6a<br/>
+                        44795 Bochum<br/>
+                        Germany</p>
+                    <p>Contact: <a href="mailto:andreas.ebbertkarroum@gmail.com">email</a></p>
 
-                    </ul>
                 </div>
                 <!--/.Second column-->
             </div>

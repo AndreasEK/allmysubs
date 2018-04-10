@@ -7,39 +7,38 @@
 {% set active_page = "home" %}
 
 {% block content %}
-    <!--Main layout-->
-    <main class="mt-5">
-
         <!--Main container-->
-        <div class="container">
+    <div class="container">
 
-            <!--Grid row-->
-            <div class="row ">
-                <div class="col-md-12 mt-5">
-
-
-                    <h1>allmysubs</h1>
-                    <hr>
-                    <p>We all know that YouTube optimizes the subscription feed. allmysubs.video will out control
-                        back into Your hands. Stay up to date with the channels you have subscribed
-                        to.</p>
-                    <p>allmysubs.video helps you to never miss a video again.</p>
-                    <p>It will list the <strong>five</strong> latest videos from all your
-                        subscribed channels in chronological order.</p>
-                    <a href="/subs" class="btn btn-cyan">SEE ALL MY SUBS</a>
-
-
-                </div>
-
+        {% if message is defined %}
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+                <strong>{{ message }}</strong> Thanks for using allmysubs.video.
             </div>
-            <!--Grid row-->
-
-            <!--Grid row-->
+        {% endif %}
 
 
+        <!--Grid row-->
+        <div class="jumbotron">
+            <h1 class="h1-responsive">allmysubs</h1>
+            <p class="lead">We all know that YouTube optimizes the subscription feed. allmysubs.video will out control
+                back into Your hands. Stay up to date with the channels you have subscribed
+                to.</p>
+            <hr class="my-2">
+            <p>allmysubs.video helps you to never miss a video again.
+                It will list the <strong>five</strong> latest videos from all your
+                subscribed channels in chronological order.
+            </p>
+            <a class="btn btn-cyan btn-lg" role="subs" href="/subs">ALL MY SUBS</a>
         </div>
-        <!--Main container-->
 
-    </main>
-    <!--Main layout-->
+
+        <!--Grid row-->
+
+
+    </div>
+
+
 {% endblock %}

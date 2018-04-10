@@ -7,72 +7,67 @@
 {% set active_page = "subs" %}
 
 {% block content %}
-    <!--Main layout-->
-    <main class="" style="margin-top: 4rem">
+    <div class="container">
 
-        <!--Main container-->
-        <div class="container">
+        <!--Grid row-->
+        <div class="row equal-height">
+            {% for video in videos %}
+            <div class="col-sm-6 col-md-6 col-lg-4 col-xl-3">
+                <!--Card-->
+                <div class="card mb-4">
 
-            <div class="row">
-                <div class="col-12">
-                    <h1>Hello, {{ channel.snippet.title }}</h1>
-                </div>
-            </div>
-            <!--Grid row-->
-            <div class="row equal-height">
-                {% for video in videos %}
-                <div class="col-sm-6 col-md-6 col-lg-4 col-xl-3">
-                    <!--Card-->
-                    <div class="card mb-4">
-
-                        <!--Card image-->
-                        <div class="view overlay">
-                            <img src="
-                            {% if 'maxres' in video.snippet.thumbnails %}
-                            {{ video.snippet.thumbnails.maxres.url }}
-                            {% elif 'medium' in video.snippet.thumbnails %}
-                            {{ video.snippet.thumbnails.medium.url }}
-                            {% else %}
-                            {{ video.snippet.thumbnails.default.url }}
-                            {% endif %}"
-                                 class="img-fluid" alt="{{ video.snippet.title }}">
-                            <a href="https://www.youtube.com/watch?v={{ video.snippet.resourceId.videoId }}"
-                               target="_blank">
-                                <div class="mask rgba-white-slight"></div>
-                            </a>
-                        </div>
-
-                        <!--Card content-->
-                        <div class="card-body">
-                            <!--Title-->
-                            <h5 class="card-title">{{ video.snippet.title|truncate(50) }}</h5>
-                            <!--Text-->
-                            <p class="card-text"> {{ video.snippet.description|truncate(100) }}.</p>
-                            <p class="card-text"><a
-                                    href="https://www.youtube.com/channel/{{ video.snippet.channelId }}">
-                                {{ video.snippet.channelTitle }}</a> {{ moment(video.snippet.publishedAt_parsed).fromNow() }}.
-                            </p>
-                        </div>
-                        <div class="card-footer">
-                            <a href="https://www.youtube.com/watch?v={{ video.snippet.resourceId.videoId }}" target="_blank"
-                               class="card-link float-right">WATCH</a>
-                        </div>
-
+                    <!--Card image-->
+                    <div class="view overlay">
+                        <img src="
+                        {% if 'maxres' in video.snippet.thumbnails %}
+                        {{ video.snippet.thumbnails.maxres.url }}
+                        {% elif 'medium' in video.snippet.thumbnails %}
+                        {{ video.snippet.thumbnails.medium.url }}
+                        {% else %}
+                        {{ video.snippet.thumbnails.default.url }}
+                        {% endif %}"
+                             class="img-fluid" alt="{{ video.snippet.title }}"/>
+                        <a href="https://www.youtube.com/watch?v={{ video.snippet.resourceId.videoId }}"
+                           target="_blank">
+                            <div class="mask rgba-white-slight"></div>
+                        </a>
                     </div>
-                    <!--/.Card-->
+
+                    <!--Card content-->
+                    <div class="card-body">
+                        <!--Title-->
+                        <h5 class="card-title">
+                            <a href="https://www.youtube.com/channel/{{ video.snippet.channelId }}">
+                                <img class="float-left mr-3" style="height:3rem" src="{{ thumbs.get(video.snippet.channelId)}}"/>
+                            </a>
+                            {{ video.snippet.title|truncate(50) }}<br/>
+                            <small class="text-muted">
+                                <a href="https://www.youtube.com/channel/{{ video.snippet.channelId }}">
+                                    {{ video.snippet.channelTitle }}
+                                </a>
+                                {{ moment(video.snippet.publishedAt_parsed).fromNow() }}
+                            </small>
+
+                        </h5>
+                        <!--Text-->
+                        <p class="card-text"> {{ video.snippet.description|truncate(100) }}.</p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="https://www.youtube.com/watch?v={{ video.snippet.resourceId.videoId }}" target="_blank"
+                           class="card-link float-right">WATCH</a>
+                    </div>
 
                 </div>
-                {% endfor %}
+                <!--/.Card-->
 
             </div>
-            <!--Grid row-->
-
-            <!--Grid row-->
-
+            {% endfor %}
 
         </div>
-        <!--Main container-->
+        <!--Grid row-->
 
-    </main>
-    <!--Main layout-->
+        <!--Grid row-->
+
+
+    </div>
 {% endblock %}

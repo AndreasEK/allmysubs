@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}About{% endblock %}
+{% block head %}
+{{ super() }}
+{% endblock %}
+
+{% set active_page = "about" %}
+
+{% block content %}
+        <!--Main container-->
+    <div class="container">
+
+        <!--Grid row-->
+        <div class="jumbotron">
+            <h1 class="h1-responsive">Hi, I'm Andreas</h1>
+            <p class="lead">With all the discussion taking place about curated feeds, I thought it would be nice to
+            at least have the alternative to get access to my subscribed channels in an unfiltered way.</p>
+            <hr class="my-2">
+            <p>This was the idea that triggered the creation of allmysubs.video. With this project, I try to stay
+            as transparent, as I possibly can. The <a href="https://github.com/AndreasEK/allmysubs" target="_blank">sources are open on GitHub</a>,
+            the app currently only requires reading permissions of your YouTube account (otherwise, the subscribed channels cannot be read).</p>
+            <p>The functionality is very limited right now: For every channel, that you have subscribed to, it reads the information of the
+            five latest video and presents this list in chronological order. That's all.</p>
+            <p>If you like the idea, you probably have as many ideas how and what to build on this foundation, as I do. Please, join the
+            discussion and leave some <a href="https://allmysubs.fider.io/" target="_blank">Feedback</a>.</p>
+            <p>Thanks to my friends <a href="https://www.youtube.com/user/defender833gaming" target="_blank">Defender833</a> and
+            <a href="randompeople.de" target="_blank">Istani</a> for their support, ideas and early testing.</p>
+            <p>If you want to support me, consider joining the development and watch some of my videos. Thanks, Andreas</p>
+            <a class="btn btn-cyan btn-lg" href="https://www.youtube.com/channel/UCpIHiWuIIF-YKBFtC-fxbrQ?sub_confirmation=1">SUBSCRIBE</a>
+        </div>
+
+
+        <!--Grid row-->
+
+
+    </div>
+
+
+{% endblock %}

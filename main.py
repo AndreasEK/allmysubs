@@ -35,14 +35,19 @@ from google.auth.transport.requests import AuthorizedSession
 
 from oauth2client.client import GoogleCredentials
 
-#google_auth_credentials = credentials_from_session(oauth2session)
+# google_auth_credentials = credentials_from_session(oauth2session)
 
 from requests_toolbelt.adapters import appengine
+
+SUBSCRIPTIONS_TIMEOUT = 60 * 60
+UPLOADS_TIMEOUT = 5 * 60
 appengine.monkeypatch()
 
 # [START imports]
 from flask import Flask, render_template, request
 from flask_moment import Moment
+from werkzeug.contrib.cache import GAEMemcachedCache
+
 # [END imports]
 
 # This variable specifies the name of a file that contains the OAuth 2.0
@@ -59,21 +64,31 @@ API_VERSION = 'v3'
 # [START create_app]
 app = Flask(__name__)
 moment = Moment(app)
+cache = GAEMemcachedCache()
 # [END create_app]
 
 # Replace this with a truly secret
 # key. See http://flask.pocoo.org/docs/0.12/quickstart/#sessions.
 app.secret_key = 'l\x1c.\xe6X\x9cq\xdb\x93w\xcc!\xf5]\x8d\x91\xb2\xfe|Y\xb6\xe4\x83\xd0'
 
+
 @app.route('/')
 def index():
     return render_template('home.html')
 
 
+@app.route('/about')
+def about():
+    return render_template('about.html')
+
+
 def get_upload_playlist(playlist, all_new_videos, youtube):
-    new_videos = youtube.playlistItems().list(part='snippet', playlistId=playlist).execute().get('items', [])
-    for video in new_videos:
-        video['snippet']['publishedAt_parsed'] = dateutil.parser.parse(video['snippet']['publishedAt'])
+    new_videos = cache.get('uploads_from_' + playlist)
+    if new_videos is None:
+        new_videos = youtube.playlistItems().list(part='snippet', playlistId=playlist).execute().get('items', [])
+        for video in new_videos:
+            video['snippet']['publishedAt_parsed'] = dateutil.parser.parse(video['snippet']['publishedAt'])
+        cache.add('uploads_from_' + playlist, new_videos, UPLOADS_TIMEOUT)
     all_new_videos += new_videos
     print("Added videos for playlist: ", playlist)
     pass
@@ -81,7 +96,6 @@ def get_upload_playlist(playlist, all_new_videos, youtube):
 
 @app.route('/subs')
 def show_all_subs():
-
     if 'credentials' not in flask.session:
         return flask.redirect('authorize')
 
@@ -93,7 +107,7 @@ def show_all_subs():
 
     if credentials.expired:
         print("Credentials have been expired, refreshing")
-        refresh_request = google.auth.transport.requests.Request(session = AuthorizedSession(credentials))
+        refresh_request = google.auth.transport.requests.Request(session=AuthorizedSession(credentials))
         credentials.refresh(refresh_request)
 
     youtube = googleapiclient.discovery.build(
@@ -112,40 +126,51 @@ def show_all_subs():
         fields='kind,etag,nextPageToken,prevPageToken,pageInfo,items/snippet/resourceId,items/snippet/title,items/snippet/thumbnails/medium/url'
     )
 
-    all_upload_playlists = []
-    all_subscribed_channels = []
+    print("Channel ID", active_channel['id'])
+    all_upload_playlists = cache.get('subs_for_' + active_channel['id'])
+    subscribed_channel_thumbnails = cache.get('thumbs_for_' + active_channel['id'])
 
-    while channels_request is not None:
-        subscribed_channels_result = channels_request.execute()
+    if (all_upload_playlists is None) or (subscribed_channel_thumbnails is None):
 
-        subscribed_channels = subscribed_channels_result.get('items', [])
-        all_subscribed_channels += subscribed_channels
+        all_upload_playlists = []
+        subscribed_channel_thumbnails = {}
 
-        subscribed_channel_ids = []
+        while channels_request is not None:
+            subscribed_channels_result = channels_request.execute()
 
-        for subscribed_channel in subscribed_channels:
-            subscribed_channel_ids.append(subscribed_channel['snippet']['resourceId']['channelId'])
+            subscribed_channels = subscribed_channels_result.get('items', [])
 
-        print("Found subscriptions: ", len(subscribed_channel_ids))
+            subscribed_channel_ids = []
 
-        uploads_playlist_result = youtube.channels().list(
-            part='contentDetails',
-            id=",".join(subscribed_channel_ids)).execute()
+            for subscribed_channel in subscribed_channels:
+                channel_id = subscribed_channel['snippet']['resourceId']['channelId']
+                subscribed_channel_ids.append(channel_id)
+                subscribed_channel_thumbnails[channel_id] = subscribed_channel['snippet']['thumbnails']['medium']['url']
 
-        for upload in uploads_playlist_result.get('items', []):
-            all_upload_playlists.append(upload['contentDetails']['relatedPlaylists']['uploads'])
+            print("Found subscriptions: ", len(subscribed_channel_ids))
 
-        channels_request = youtube.subscriptions().list_next(channels_request, subscribed_channels_result)
+            uploads_playlist_result = youtube.channels().list(
+                part='contentDetails',
+                id=",".join(subscribed_channel_ids)).execute()
+
+            for upload in uploads_playlist_result.get('items', []):
+                all_upload_playlists.append(upload['contentDetails']['relatedPlaylists']['uploads'])
+
+            channels_request = youtube.subscriptions().list_next(channels_request, subscribed_channels_result)
+
+            cache.set('subs_for_' + active_channel['id'], all_upload_playlists,
+                      timeout=SUBSCRIPTIONS_TIMEOUT)
+            cache.set('thumbs_for_' + active_channel['id'], subscribed_channel_thumbnails,
+                      timeout=SUBSCRIPTIONS_TIMEOUT)
 
     print("Found upload playlists: ", all_upload_playlists)
-
 
     all_new_videos = []
     threads = []
 
     # In this case 'urls' is a list of urls to be crawled.
     for upload_playlist in all_upload_playlists:
-        process = Thread(args=[upload_playlist, all_new_videos, youtube], target = get_upload_playlist)
+        process = Thread(args=[upload_playlist, all_new_videos, youtube], target=get_upload_playlist)
         process.start()
         threads.append(process)
 
@@ -161,9 +186,10 @@ def show_all_subs():
     #              credentials in a persistent database instead.
     save_credentials_to_session(credentials)
 
-    return render_template('subfeed.html', videos=all_sorted_videos, channel = active_channel)
-    #return flask.jsonify(*all_sorted_videos)
-    #return flask.jsonify(active_channel)
+    return render_template('subfeed.html',
+                           videos=all_sorted_videos,
+                           channel=active_channel,
+                           thumbs=subscribed_channel_thumbnails)
 
 
 @app.route('/authorize')
@@ -180,7 +206,7 @@ def authorize():
         access_type='offline',
         # Enable incremental authorization. Recommended as a best practice.
         include_granted_scopes='true',
-    prompt='consent')
+        prompt='consent')
 
     # Store the state so the callback can verify the auth server response.
     flask.session['state'] = state
@@ -226,20 +252,20 @@ def revoke():
 
     revoke = requests.post('https://accounts.google.com/o/oauth2/revoke',
                            params={'token': credentials.token},
-                           headers = {'content-type': 'application/x-www-form-urlencoded'})
+                           headers={'content-type': 'application/x-www-form-urlencoded'})
 
     status_code = getattr(revoke, 'status_code')
     if status_code == 200:
-        return('Credentials successfully revoked.')
+        return render_template('home.html', message='Credentials successfully revoked.')
     else:
-        return('An error occurred.')
+        return render_template('home.html', message='An error occurred.')
 
 
 @app.route('/clear')
 def clear_credentials():
     if 'credentials' in flask.session:
         del flask.session['credentials']
-    return ('Credentials have been cleared.')
+    return render_template('home.html', message='Credentials have been cleared.')
 
 
 def save_credentials_to_session(credentials):

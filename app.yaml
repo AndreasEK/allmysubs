@@ -5,6 +5,8 @@ threadsafe: true
 libraries:
 - name: ssl
   version: latest
+- name: numpy
+  version: latest
 
 # [START handlers]
 handlers:

@@ -17,12 +17,15 @@ from __future__ import print_function
 import logging
 import os
 
+from numpy import array_split
+
 import httplib2
 import requests
 import flask
 import dateutil.parser
-import datetime
+from datetime import datetime, timedelta
 from threading import Thread
+import time
 
 # TODO: "3 days ago" - use https://github.com/miguelgrinberg/Flask-Moment
 # TODO: i18n - use https://pythonhosted.org/Flask-Babel/
@@ -39,8 +42,10 @@ from oauth2client.client import GoogleCredentials
 
 from requests_toolbelt.adapters import appengine
 
-SUBSCRIPTIONS_TIMEOUT = 60 * 60
-UPLOADS_TIMEOUT = 5 * 60
+SUBSCRIPTIONS_TIMEOUT = 4 * 60 * 60
+UPLOADS_TIMEOUT = 30 * 60
+UPLOADS_PLAYLIST_TIMEOUT = 0
+
 appengine.monkeypatch()
 
 # [START imports]
@@ -81,16 +86,36 @@ def index():
 def about():
     return render_template('about.html')
 
+def read_uploadplaylist_from_channel(subscribed_channels_chunk, all_upload_playlists, youtube):
+    cached_results = cache.get_many(*["uploadplaylist_" + channel for channel in subscribed_channels_chunk])
 
-def get_upload_playlist(playlist, all_new_videos, youtube):
+    cache_misses = []
+    for i in range(len(subscribed_channels_chunk)):
+        if cached_results[i] is None:
+            cache_misses.append(subscribed_channels_chunk[i])
+        else:
+            all_upload_playlists.append(cached_results[i])
+
+    uploads_playlist_result = youtube.channels().list(
+        part='contentDetails',
+        maxResults=len(subscribed_channels_chunk),
+        id=",".join(cache_misses)).execute()
+
+    for upload in uploads_playlist_result.get('items', []):
+        cache.add("uploadplaylist_"+upload['id'], upload['contentDetails']['relatedPlaylists']['uploads'], UPLOADS_PLAYLIST_TIMEOUT)
+        all_upload_playlists.append(upload['contentDetails']['relatedPlaylists']['uploads'])
+
+
+def read_latest_videos_from_upload_playlist(playlist, all_new_videos, youtube):
     new_videos = cache.get('uploads_from_' + playlist)
     if new_videos is None:
-        new_videos = youtube.playlistItems().list(part='snippet', playlistId=playlist).execute().get('items', [])
+        new_videos = youtube.playlistItems().list(part='snippet', playlistId=playlist, maxResults=50).execute().get('items', [])
         for video in new_videos:
             video['snippet']['publishedAt_parsed'] = dateutil.parser.parse(video['snippet']['publishedAt'])
         cache.add('uploads_from_' + playlist, new_videos, UPLOADS_TIMEOUT)
+
+    new_videos = filter(lambda video: datetime.now(video['snippet']['publishedAt_parsed'].tzinfo)-timedelta(days=7) <= video['snippet']['publishedAt_parsed'] , new_videos)
     all_new_videos += new_videos
-    print("Added videos for playlist: ", playlist)
     pass
 
 
@@ -106,90 +131,113 @@ def show_all_subs():
     print("Credentials expired? ", credentials.expired)
 
     if credentials.expired:
-        print("Credentials have been expired, refreshing")
-        refresh_request = google.auth.transport.requests.Request(session=AuthorizedSession(credentials))
-        credentials.refresh(refresh_request)
+        refresh_credentials(credentials)
 
     youtube = googleapiclient.discovery.build(
         API_SERVICE_NAME, API_VERSION, credentials=credentials)
 
-    active_channel_response = youtube.channels().list(
-        mine=True,
-        part='snippet'
-    ).execute()
-    active_channel = active_channel_response.get('items')[0]
+    active_channel = read_active_channel(youtube)
 
-    channels_request = youtube.subscriptions().list(
-        mine=True,
-        part='snippet',
-        maxResults=50,
-        fields='kind,etag,nextPageToken,prevPageToken,pageInfo,items/snippet/resourceId,items/snippet/title,items/snippet/thumbnails/medium/url'
-    )
+    print("Active channel ID", active_channel['id'])
+    subscribed_channel_ids, subscribed_channel_thumbnails = read_subscriptions(active_channel, youtube)
 
-    print("Channel ID", active_channel['id'])
-    all_upload_playlists = cache.get('subs_for_' + active_channel['id'])
+    all_upload_playlists = read_upload_playlists(subscribed_channel_ids, youtube)
+
+    all_sorted_videos = read_latest_videos(all_upload_playlists, youtube)
+
+    return render_template('subfeed.html',
+                           videos=all_sorted_videos,
+                           channel=active_channel,
+                           thumbs=subscribed_channel_thumbnails)
+
+
+def read_latest_videos(all_upload_playlists, youtube):
+    # read latest videos from upload playlists
+    all_new_videos = []
+    collect_videos_threads = []
+    for upload_playlist in all_upload_playlists:
+        while len(collect_videos_threads) >= 50:
+            for process in collect_videos_threads:
+                process.join()
+            collect_videos_threads = []
+        process = Thread(args=[upload_playlist, all_new_videos, youtube],
+                         target=read_latest_videos_from_upload_playlist)
+        process.start()
+        collect_videos_threads.append(process)
+    for process in collect_videos_threads:
+        process.join()
+    all_sorted_videos = sorted(all_new_videos, reverse=True, key=lambda x: x['snippet']['publishedAt'])
+    return all_sorted_videos
+
+
+def read_upload_playlists(subscribed_channel_ids, youtube):
+    # read upload playlists from subscribed channels
+    collect_uploadplaylists_threads = []
+    all_upload_playlists = []
+    for subscribed_channels_chunk in array_split(subscribed_channel_ids, 1 + (len(subscribed_channel_ids) / 50)):
+        subscribed_channels_chunk = subscribed_channels_chunk.tolist()
+
+        process = Thread(args=[subscribed_channels_chunk, all_upload_playlists, youtube],
+                         target=read_uploadplaylist_from_channel)
+        process.start()
+        collect_uploadplaylists_threads.append(process)
+    for process in collect_uploadplaylists_threads:
+        process.join()
+    return all_upload_playlists
+
+
+def read_subscriptions(active_channel, youtube):
+    subscribed_channel_ids = cache.get('subs_for_' + active_channel['id'])
     subscribed_channel_thumbnails = cache.get('thumbs_for_' + active_channel['id'])
+    if (subscribed_channel_ids is None) or (subscribed_channel_thumbnails is None):
 
-    if (all_upload_playlists is None) or (subscribed_channel_thumbnails is None):
+        # cache miss!
 
-        all_upload_playlists = []
         subscribed_channel_thumbnails = {}
+        subscribed_channel_ids = []
+
+        # read subscribed channels
+
+        channels_request = youtube.subscriptions().list(
+            mine=True,
+            part='snippet',
+            maxResults=50,
+            fields='kind,etag,nextPageToken,prevPageToken,pageInfo,items/snippet/resourceId,items/snippet/title,items/snippet/thumbnails/medium/url'
+        )
 
         while channels_request is not None:
             subscribed_channels_result = channels_request.execute()
 
             subscribed_channels = subscribed_channels_result.get('items', [])
 
-            subscribed_channel_ids = []
-
             for subscribed_channel in subscribed_channels:
                 channel_id = subscribed_channel['snippet']['resourceId']['channelId']
                 subscribed_channel_ids.append(channel_id)
                 subscribed_channel_thumbnails[channel_id] = subscribed_channel['snippet']['thumbnails']['medium']['url']
 
-            print("Found subscriptions: ", len(subscribed_channel_ids))
-
-            uploads_playlist_result = youtube.channels().list(
-                part='contentDetails',
-                id=",".join(subscribed_channel_ids)).execute()
-
-            for upload in uploads_playlist_result.get('items', []):
-                all_upload_playlists.append(upload['contentDetails']['relatedPlaylists']['uploads'])
-
             channels_request = youtube.subscriptions().list_next(channels_request, subscribed_channels_result)
 
-            cache.set('subs_for_' + active_channel['id'], all_upload_playlists,
-                      timeout=SUBSCRIPTIONS_TIMEOUT)
-            cache.set('thumbs_for_' + active_channel['id'], subscribed_channel_thumbnails,
-                      timeout=SUBSCRIPTIONS_TIMEOUT)
+        cache.set('subs_for_' + active_channel['id'], subscribed_channel_ids,
+                  timeout=SUBSCRIPTIONS_TIMEOUT)
+        cache.set('thumbs_for_' + active_channel['id'], subscribed_channel_thumbnails,
+                  timeout=SUBSCRIPTIONS_TIMEOUT)
+    return subscribed_channel_ids, subscribed_channel_thumbnails
 
-    print("Found upload playlists: ", all_upload_playlists)
 
-    all_new_videos = []
-    threads = []
+def read_active_channel(youtube):
+    active_channel_response = youtube.channels().list(
+        mine=True,
+        part='snippet'
+    ).execute()
+    active_channel = active_channel_response.get('items')[0]
+    return active_channel
 
-    # In this case 'urls' is a list of urls to be crawled.
-    for upload_playlist in all_upload_playlists:
-        process = Thread(args=[upload_playlist, all_new_videos, youtube], target=get_upload_playlist)
-        process.start()
-        threads.append(process)
 
-    # We now pause execution on the main thread by 'joining' all of our started threads.
-    # This ensures that each has finished processing the urls.
-    for process in threads:
-        process.join()
-
-    all_sorted_videos = sorted(all_new_videos, reverse=True, key=lambda x: x['snippet']['publishedAt'])
-
-    # Save credentials back to session in case access token was refreshed.
-    # ACTION ITEM: In a production app, you likely want to save these
-    #              credentials in a persistent database instead.
+def refresh_credentials(credentials):
+    print("Credentials have been expired, refreshing")
+    refresh_request = google.auth.transport.requests.Request(session=AuthorizedSession(credentials))
+    credentials.refresh(refresh_request)
     save_credentials_to_session(credentials)
-
-    return render_template('subfeed.html',
-                           videos=all_sorted_videos,
-                           channel=active_channel,
-                           thumbs=subscribed_channel_thumbnails)
 
 
 @app.route('/authorize')
@@ -269,7 +317,7 @@ def clear_credentials():
 
 
 def save_credentials_to_session(credentials):
-    credentials.expiry = credentials.expiry - datetime.timedelta(hours=1)
+    credentials.expiry = credentials.expiry - timedelta(hours=1)
     flask.session['credentials'] = credentials_to_dict(credentials)
     flask.session['token_expiry'] = credentials.expiry
 

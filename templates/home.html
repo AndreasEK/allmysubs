@@ -7,38 +7,48 @@
 {% set active_page = "home" %}
 
 {% block content %}
-        <!--Main container-->
-    <div class="container">
+<!--Main container-->
+<div class="container">
 
-        {% if message is defined %}
-            <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-                <strong>{{ message }}</strong> Thanks for using allmysubs.video.
-            </div>
-        {% endif %}
-
-
-        <!--Grid row-->
-        <div class="jumbotron">
-            <h1 class="h1-responsive">allmysubs</h1>
-            <p class="lead">We all know that YouTube optimizes the subscription feed. allmysubs.video will out control
-                back into Your hands. Stay up to date with the channels you have subscribed
-                to.</p>
-            <hr class="my-2">
-            <p>allmysubs.video helps you to never miss a video again.
-                It will list the <strong>five</strong> latest videos from all your
-                subscribed channels in chronological order.
-            </p>
-            <a class="btn btn-cyan btn-lg" role="subs" href="/subs">ALL MY SUBS</a>
-        </div>
-
-
-        <!--Grid row-->
-
-
+    {% if message is defined %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+        <strong>{{ message }}</strong> Thanks for using allmysubs.video.
     </div>
+    {% endif %}
+
+
+    <!--Grid row-->
+    <div class="jumbotron">
+        <h1 class="h1-responsive">allmysubs</h1>
+        <p class="lead">We all know that YouTube optimizes the subscription feed. allmysubs.video will out control
+            back into Your hands. Stay up to date with the channels you have subscribed
+            to.</p>
+        <hr class="my-2">
+        <p>allmysubs.video helps you to never miss a video again.
+            It will list the <strong>five</strong> latest videos from all your
+            subscribed channels in chronological order.
+        </p>
+        <a class="btn btn-cyan btn-lg" role="subs" href="/subs">ALL MY SUBS</a>
+    </div>
+
+
+    <!--Grid row-->
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <!-- home -->
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-6264717904787140"
+         data-ad-slot="2763600926"
+         data-ad-format="auto"></ins>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+
+    </script>
+
+</div>
 
 
 {% endblock %}

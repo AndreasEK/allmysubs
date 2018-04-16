@@ -13,22 +13,15 @@
 # limitations under the License.
 
 # [START app]
-from __future__ import print_function
 import logging
-import os
 
 from numpy import array_split
 
-import httplib2
 import requests
 import flask
 import dateutil.parser
 from datetime import datetime, timedelta
 from threading import Thread
-import time
-
-# TODO: "3 days ago" - use https://github.com/miguelgrinberg/Flask-Moment
-# TODO: i18n - use https://pythonhosted.org/Flask-Babel/
 
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
@@ -36,24 +29,25 @@ import google_auth_oauthlib.helpers
 import googleapiclient.discovery
 from google.auth.transport.requests import AuthorizedSession
 
-from oauth2client.client import GoogleCredentials
-
-# google_auth_credentials = credentials_from_session(oauth2session)
-
 from requests_toolbelt.adapters import appengine
-
-SUBSCRIPTIONS_TIMEOUT = 4 * 60 * 60
-UPLOADS_TIMEOUT = 30 * 60
-UPLOADS_PLAYLIST_TIMEOUT = 0
-
-appengine.monkeypatch()
-
-# [START imports]
 from flask import Flask, render_template, request
 from flask_moment import Moment
 from werkzeug.contrib.cache import GAEMemcachedCache
 
-# [END imports]
+CACHE_THUMBNAILS_PREFIX = 'thumbs_for_'
+
+CACHE_SUBSCRIPTIONS_PREFIX = 'subs_for_'
+
+CACHE_LATEST_UPLOADS_PREFIX = 'uploads_from_'
+
+CACHE_UPLOADPLAYLIST_PREFIX = "uploadplaylist_"
+
+appengine.monkeypatch()
+
+# defining some cache timeouts
+SUBSCRIPTIONS_TIMEOUT = 4 * 60 * 60
+UPLOADS_TIMEOUT = 30 * 60
+UPLOADS_PLAYLIST_TIMEOUT = 0
 
 # This variable specifies the name of a file that contains the OAuth 2.0
 # information for this application, including its client_id and client_secret.
@@ -72,8 +66,6 @@ moment = Moment(app)
 cache = GAEMemcachedCache()
 # [END create_app]
 
-# Replace this with a truly secret
-# key. See http://flask.pocoo.org/docs/0.12/quickstart/#sessions.
 app.secret_key = 'l\x1c.\xe6X\x9cq\xdb\x93w\xcc!\xf5]\x8d\x91\xb2\xfe|Y\xb6\xe4\x83\xd0'
 
 
@@ -86,76 +78,87 @@ def index():
 def about():
     return render_template('about.html')
 
-def read_uploadplaylist_from_channel(subscribed_channels_chunk, all_upload_playlists, youtube):
-    cached_results = cache.get_many(*["uploadplaylist_" + channel for channel in subscribed_channels_chunk])
+
+def refresh_credentials(credentials):
+    print("Credentials have been expired, refreshing")
+    refresh_request = google.auth.transport.requests.Request(session=AuthorizedSession(credentials))
+    credentials.refresh(refresh_request)
+    save_credentials_to_session(credentials)
+
+
+def read_active_channel(youtube):
+    active_channel_response = youtube.channels().list(
+        mine=True,
+        part='snippet'
+    ).execute()
+    active_channel = active_channel_response.get('items')[0]
+    return active_channel
+
+
+def read_uploadplaylist_from_channel(channels, upload_playlists, youtube):
+    """
+    Figures out the id of the upload playlist for a list of channels. First the
+    information will be read from the cache, if possible. If it's not in there, the
+    youtube API will be used (channels resource).
+    :param channels: list of channel ids
+    :param upload_playlists: list to which the new upload playlist ids are added
+    :param youtube: the youtube api
+    :return: 
+    """
+    cached_results = cache.get_many(*[CACHE_UPLOADPLAYLIST_PREFIX + channel for channel in channels])
 
     cache_misses = []
-    for i in range(len(subscribed_channels_chunk)):
+    for i in range(len(channels)):
         if cached_results[i] is None:
-            cache_misses.append(subscribed_channels_chunk[i])
+            cache_misses.append(channels[i])
         else:
-            all_upload_playlists.append(cached_results[i])
+            upload_playlists.append(cached_results[i])
 
-    uploads_playlist_result = youtube.channels().list(
+    channels_results = youtube.channels().list(
         part='contentDetails',
-        maxResults=len(subscribed_channels_chunk),
+        maxResults=len(channels),
         id=",".join(cache_misses)).execute()
 
-    for upload in uploads_playlist_result.get('items', []):
-        cache.add("uploadplaylist_"+upload['id'], upload['contentDetails']['relatedPlaylists']['uploads'], UPLOADS_PLAYLIST_TIMEOUT)
-        all_upload_playlists.append(upload['contentDetails']['relatedPlaylists']['uploads'])
+    for channel in channels_results.get('items', []):
+        cache.add(CACHE_UPLOADPLAYLIST_PREFIX + channel['id'], channel['contentDetails']['relatedPlaylists']['uploads'], UPLOADS_PLAYLIST_TIMEOUT)
+        upload_playlists.append(channel['contentDetails']['relatedPlaylists']['uploads'])
+    pass
 
 
 def read_latest_videos_from_upload_playlist(playlist, all_new_videos, youtube):
-    new_videos = cache.get('uploads_from_' + playlist)
+    """
+    Tries to figure out the latest videos for a given playlist. It does that my reading the first 50 elements
+    of that playlist, then filters them for a maximum age of 7 days
+    :param playlist: The playlist to read the videos from
+    :param all_new_videos: the list to add all new videos to
+    :param youtube: the youtube api
+    :return:
+    """
+    new_videos = cache.get(CACHE_LATEST_UPLOADS_PREFIX + playlist)
     if new_videos is None:
         new_videos = youtube.playlistItems().list(part='snippet', playlistId=playlist, maxResults=50).execute().get('items', [])
         for video in new_videos:
             video['snippet']['publishedAt_parsed'] = dateutil.parser.parse(video['snippet']['publishedAt'])
-        cache.add('uploads_from_' + playlist, new_videos, UPLOADS_TIMEOUT)
+        cache.add(CACHE_LATEST_UPLOADS_PREFIX + playlist, new_videos, UPLOADS_TIMEOUT)
 
     new_videos = filter(lambda video: datetime.now(video['snippet']['publishedAt_parsed'].tzinfo)-timedelta(days=7) <= video['snippet']['publishedAt_parsed'] , new_videos)
     all_new_videos += new_videos
     pass
 
 
-@app.route('/subs')
-def show_all_subs():
-    if 'credentials' not in flask.session:
-        return flask.redirect('authorize')
-
-    # Load credentials from the session.
-    credentials = credentials_from_session()
-
-    print("Credentials expiry: ", credentials.expiry)
-    print("Credentials expired? ", credentials.expired)
-
-    if credentials.expired:
-        refresh_credentials(credentials)
-
-    youtube = googleapiclient.discovery.build(
-        API_SERVICE_NAME, API_VERSION, credentials=credentials)
-
-    active_channel = read_active_channel(youtube)
-
-    print("Active channel ID", active_channel['id'])
-    subscribed_channel_ids, subscribed_channel_thumbnails = read_subscriptions(active_channel, youtube)
-
-    all_upload_playlists = read_upload_playlists(subscribed_channel_ids, youtube)
-
-    all_sorted_videos = read_latest_videos(all_upload_playlists, youtube)
-
-    return render_template('subfeed.html',
-                           videos=all_sorted_videos,
-                           channel=active_channel,
-                           thumbs=subscribed_channel_thumbnails)
-
-
 def read_latest_videos(all_upload_playlists, youtube):
-    # read latest videos from upload playlists
+    """
+    Creates chucks of 50 threads and accesses youtube data api (or cache) to read
+    the latest videos from all upload playlists
+    :param all_upload_playlists:
+    :param youtube:
+    :return:
+    """
     all_new_videos = []
     collect_videos_threads = []
     for upload_playlist in all_upload_playlists:
+        # the 50 is a result from manual try-and-error to balance speed and memory consumption
+        # on google app engine
         while len(collect_videos_threads) >= 50:
             for process in collect_videos_threads:
                 process.join()
@@ -171,6 +174,12 @@ def read_latest_videos(all_upload_playlists, youtube):
 
 
 def read_upload_playlists(subscribed_channel_ids, youtube):
+    """
+    multi-threaded approach to retrieve upload playlist of the list of subscribed channels
+    :param subscribed_channel_ids:
+    :param youtube:
+    :return:
+    """
     # read upload playlists from subscribed channels
     collect_uploadplaylists_threads = []
     all_upload_playlists = []
@@ -187,8 +196,14 @@ def read_upload_playlists(subscribed_channel_ids, youtube):
 
 
 def read_subscriptions(active_channel, youtube):
-    subscribed_channel_ids = cache.get('subs_for_' + active_channel['id'])
-    subscribed_channel_thumbnails = cache.get('thumbs_for_' + active_channel['id'])
+    """
+    multi-threaded approach to query the subscribed channels
+    :param active_channel:
+    :param youtube:
+    :return:
+    """
+    subscribed_channel_ids = cache.get(CACHE_SUBSCRIPTIONS_PREFIX + active_channel['id'])
+    subscribed_channel_thumbnails = cache.get(CACHE_THUMBNAILS_PREFIX + active_channel['id'])
     if (subscribed_channel_ids is None) or (subscribed_channel_thumbnails is None):
 
         # cache miss!
@@ -217,27 +232,42 @@ def read_subscriptions(active_channel, youtube):
 
             channels_request = youtube.subscriptions().list_next(channels_request, subscribed_channels_result)
 
-        cache.set('subs_for_' + active_channel['id'], subscribed_channel_ids,
+        cache.set(CACHE_SUBSCRIPTIONS_PREFIX + active_channel['id'], subscribed_channel_ids,
                   timeout=SUBSCRIPTIONS_TIMEOUT)
-        cache.set('thumbs_for_' + active_channel['id'], subscribed_channel_thumbnails,
+        cache.set(CACHE_THUMBNAILS_PREFIX + active_channel['id'], subscribed_channel_thumbnails,
                   timeout=SUBSCRIPTIONS_TIMEOUT)
     return subscribed_channel_ids, subscribed_channel_thumbnails
 
 
-def read_active_channel(youtube):
-    active_channel_response = youtube.channels().list(
-        mine=True,
-        part='snippet'
-    ).execute()
-    active_channel = active_channel_response.get('items')[0]
-    return active_channel
+@app.route('/subs')
+def show_all_subs():
+    if 'credentials' not in flask.session:
+        return flask.redirect('authorize')
 
+    # Load credentials from the session.
+    credentials = credentials_from_session()
 
-def refresh_credentials(credentials):
-    print("Credentials have been expired, refreshing")
-    refresh_request = google.auth.transport.requests.Request(session=AuthorizedSession(credentials))
-    credentials.refresh(refresh_request)
-    save_credentials_to_session(credentials)
+    print("Credentials expiry: ", credentials.expiry)
+    print("Credentials expired? ", credentials.expired)
+
+    if credentials.expired:
+        refresh_credentials(credentials)
+
+    youtube = googleapiclient.discovery.build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
+
+    active_channel = read_active_channel(youtube)
+
+    print("Active channel ID", active_channel['id'])
+    subscribed_channel_ids, subscribed_channel_thumbnails = read_subscriptions(active_channel, youtube)
+
+    all_upload_playlists = read_upload_playlists(subscribed_channel_ids, youtube)
+
+    all_sorted_videos = read_latest_videos(all_upload_playlists, youtube)
+
+    return render_template('subfeed.html',
+                           videos=all_sorted_videos,
+                           channel=active_channel,
+                           thumbs=subscribed_channel_thumbnails)
 
 
 @app.route('/authorize')
@@ -282,11 +312,6 @@ def oauth2callback():
     save_credentials_to_session(flow.credentials)
 
     return flask.redirect(flask.url_for('show_all_subs'))
-
-
-def dump(obj):
-    for attr in dir(obj):
-        print("obj.%s = %r" % (attr, getattr(obj, attr)))
 
 
 @app.route('/revoke')

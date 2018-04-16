@@ -42,3 +42,4 @@ Disable https when developling locally:
   https://mdbootstrap.com/corporate-website-lesson-1/
 * Multi-Threading 
   https://www.shanelynn.ie/using-python-threading-for-multiple-results-queue/
+* https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world

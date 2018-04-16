@@ -1,46 +1,19 @@
-# Copyright 2016 Google Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-# [START app]
 import logging
-
-from numpy import array_split
-
 import requests
 import flask
 import dateutil.parser
-from datetime import datetime, timedelta
-from threading import Thread
-
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
 import google_auth_oauthlib.helpers
 import googleapiclient.discovery
-from google.auth.transport.requests import AuthorizedSession
 
+from datetime import datetime, timedelta
+from threading import Thread
+from google.auth.transport.requests import AuthorizedSession
 from requests_toolbelt.adapters import appengine
-from flask import Flask, render_template, request
+from flask import Flask, render_template
 from flask_moment import Moment
 from werkzeug.contrib.cache import GAEMemcachedCache
-
-CACHE_THUMBNAILS_PREFIX = 'thumbs_for_'
-
-CACHE_SUBSCRIPTIONS_PREFIX = 'subs_for_'
-
-CACHE_LATEST_UPLOADS_PREFIX = 'uploads_from_'
-
-CACHE_UPLOADPLAYLIST_PREFIX = "uploadplaylist_"
 
 appengine.monkeypatch()
 
@@ -48,6 +21,12 @@ appengine.monkeypatch()
 SUBSCRIPTIONS_TIMEOUT = 4 * 60 * 60
 UPLOADS_TIMEOUT = 30 * 60
 UPLOADS_PLAYLIST_TIMEOUT = 0
+
+# ...and cache prefixes
+CACHE_THUMBNAILS_PREFIX = 'thumbs_for_'
+CACHE_SUBSCRIPTIONS_PREFIX = 'subs_for_'
+CACHE_LATEST_UPLOADS_PREFIX = 'uploads_from_'
+CACHE_UPLOADPLAYLIST_PREFIX = "uploadplaylist_"
 
 # This variable specifies the name of a file that contains the OAuth 2.0
 # information for this application, including its client_id and client_secret.
@@ -122,7 +101,6 @@ def read_uploadplaylist_from_channel(channels, upload_playlists, youtube):
     for channel in channels_results.get('items', []):
         cache.add(CACHE_UPLOADPLAYLIST_PREFIX + channel['id'], channel['contentDetails']['relatedPlaylists']['uploads'], UPLOADS_PLAYLIST_TIMEOUT)
         upload_playlists.append(channel['contentDetails']['relatedPlaylists']['uploads'])
-    pass
 
 
 def read_latest_videos_from_upload_playlist(playlist, all_new_videos, youtube):
@@ -142,8 +120,7 @@ def read_latest_videos_from_upload_playlist(playlist, all_new_videos, youtube):
         cache.add(CACHE_LATEST_UPLOADS_PREFIX + playlist, new_videos, UPLOADS_TIMEOUT)
 
     new_videos = filter(lambda video: datetime.now(video['snippet']['publishedAt_parsed'].tzinfo)-timedelta(days=7) <= video['snippet']['publishedAt_parsed'] , new_videos)
-    all_new_videos += new_videos
-    pass
+    all_new_videos.extend(new_videos)
 
 
 def read_latest_videos(all_upload_playlists, youtube):
@@ -157,9 +134,9 @@ def read_latest_videos(all_upload_playlists, youtube):
     all_new_videos = []
     collect_videos_threads = []
     for upload_playlist in all_upload_playlists:
-        # the 50 is a result from manual try-and-error to balance speed and memory consumption
+        # the 100 is a result from manual try-and-error to balance speed and memory consumption
         # on google app engine
-        while len(collect_videos_threads) >= 50:
+        while len(collect_videos_threads) >= 100:
             for process in collect_videos_threads:
                 process.join()
             collect_videos_threads = []
@@ -183,9 +160,7 @@ def read_upload_playlists(subscribed_channel_ids, youtube):
     # read upload playlists from subscribed channels
     collect_uploadplaylists_threads = []
     all_upload_playlists = []
-    for subscribed_channels_chunk in array_split(subscribed_channel_ids, 1 + (len(subscribed_channel_ids) / 50)):
-        subscribed_channels_chunk = subscribed_channels_chunk.tolist()
-
+    for subscribed_channels_chunk in [subscribed_channel_ids[i:i+50] for i in range(0,len(subscribed_channel_ids),50)]:
         process = Thread(args=[subscribed_channels_chunk, all_upload_playlists, youtube],
                          target=read_uploadplaylist_from_channel)
         process.start()

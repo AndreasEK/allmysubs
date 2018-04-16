@@ -9,4 +9,3 @@ requests_toolbelt
 flask-bootstrap
 google-cloud-datastore
 flask-moment
-numpy

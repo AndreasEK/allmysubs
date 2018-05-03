@@ -14,6 +14,8 @@ from requests_toolbelt.adapters import appengine
 from flask import Flask, render_template
 from flask_moment import Moment
 from werkzeug.contrib.cache import GAEMemcachedCache
+from secret_keys import CSRF_SECRET_KEY, SESSION_KEY
+
 
 appengine.monkeypatch()
 
@@ -41,12 +43,10 @@ API_VERSION = 'v3'
 
 # [START create_app]
 app = Flask(__name__)
+app.secret_key = CSRF_SECRET_KEY
 moment = Moment(app)
 cache = GAEMemcachedCache()
 # [END create_app]
-
-app.secret_key = 'l\x1c.\xe6X\x9cq\xdb\x93w\xcc!\xf5]\x8d\x91\xb2\xfe|Y\xb6\xe4\x83\xd0'
-
 
 @app.route('/')
 def index():

@@ -2,4 +2,5 @@ lib
 env
 client_secret.json
 karroum-allmysubs.json
+secret_keys.py
 .idea

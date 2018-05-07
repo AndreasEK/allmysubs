@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+{% block head %}
+{{ super() }}
+{% endblock %}
+
+{% set active_page = "home" %}
+
+{% block content %}
+<!--Main container-->
+<div class="container">
+
+    <div class="container mt-5">
+        <!-- Example row of columns -->
+        <div class="row">
+            <div class="col-md-12">
+                <h2>How to Support AllMySubs.video</h2>
+                <p>Currently the application is running of free services in the Google Cloud. Depending on the
+                    traffic this is getting in the future, this might be enough - or maybe not. Only time will tell,
+                    but currently, it's fine the way it is. But, you can provide support in other ways:
+                    <ul>
+                        <li>In case You want to donate monay, please consider the <a href="www.youlius-award.de">Youlius-Award</a>.
+                            This is an award that a team of creators is organizing especially for small (tiny) YouTube
+                            channels.
+                            It's awesome and the show in January was a blast. If you would like them to continue, please
+                            consider donating.
+                <p><a class="btn btn-cyan" href="https://www.youlius-award.info/spenden" role="button">Donate
+                    &raquo;</a></p>
+
+                </li>
+                <li>Provide meaningful feedback to us. This is a great support too. Has AllMySubs.video worked for You?
+                    Have there been problems? Do You have further ideas? Don't hesitate to <a
+                            href="https://feedback.allmysubs.video/" target="_blank">provide Feedback</a> to us.
+                </li>
+                <li>I'm a YouTube Creator myself, so I'd appreciate if you payed a visit to my channels and to those who
+                    helped
+                    with creating allmysubs.video
+                    <ul>
+                        <li><a href="https://www.youtube.com/AlltagsabenteuerVideo" target="_blank">Alltagsabenteuer</a>
+                        </li>
+                        <li><a href="https://www.youtube.com/user/defender833gaming" target="_blank">Defender833</a>
+                        </li>
+                        <li><a href="http://randompeople.de" target="_blank">Istani</a></li>
+                    </ul>
+                </li>
+                </ul>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

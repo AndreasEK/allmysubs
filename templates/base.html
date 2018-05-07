@@ -35,7 +35,7 @@
     {% endblock %}
 </head>
 
-<body>
+<body style="min-height: 75rem;padding-top: 4.5rem;">
     <!--Main Navigation-->
     <header>
 
@@ -47,7 +47,7 @@
         {% set active_page = active_page|default('home') -%}
 
         <!--Navbar-->
-        <nav class="navbar navbar-expand-lg navbar-dark orange sticky-top">
+        <nav class="navbar navbar-expand-lg navbar-dark orange fixed-top">
             <div class="container">
                 {% block navbar %}
 
@@ -84,7 +84,7 @@
     <!--Main Navigation-->
 
     <!--Main layout-->
-    <main style="padding-top: 56px">
+    <main>
         {% block content %}
         {% endblock %}
     </main>
@@ -105,7 +105,7 @@
                             <a href="mailto:andreas.ebbertkarroum@gmail.com">Contact</a>
                         </li>
                         <li>
-                            <a href="https://allmysubs.fider.io/" target="_blank">Feedback</a>
+                            <a href="https://feedback.allmysubs.video/" target="_blank">Feedback</a>
                         </li>
                         <li>
                             <a href="https://github.com/AndreasEK/allmysubs" target="_blank">Sources on GitHub</a>

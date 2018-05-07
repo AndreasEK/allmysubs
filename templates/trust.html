@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+{% block head %}
+{{ super() }}
+{% endblock %}
+
+{% set active_page = "home" %}
+
+{% block content %}
+<!--Main container-->
+<div class="container">
+
+    <div class="container mt-5">
+        <!-- Example row of columns -->
+        <div class="row">
+            <div class="col-md-12">
+                <h2>Can You Trust AllMySubs.video?</h2>
+                <p>What is happening with Your data? What can be accessed?</p>
+                <p>The key take aways for You to feel safe are:
+                    <ul>
+                <li>AllMySubs.video only has read access to Your YouTube profile. Nothing can be changed.</li>
+                <li>Access to Your YouTube profile can always be <a href="/revoke">revoked</a>. </li>
+                <li>Same data is cached up to four hours for performance reasons, but nothing is stored permanently.</li>
+            </ul>
+                </p>
+                <p>In order to proof all the points, the complete <a href="https://github.com/AndreasEK/allmysubs" target="_blank">sources are available on GitHub</a> and can be
+                reviewed or extended by everybody.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

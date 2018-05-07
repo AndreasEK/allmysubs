@@ -58,6 +58,21 @@ def about():
     return render_template('about.html')
 
 
+@app.route('/support')
+def support():
+    return render_template('support.html')
+
+
+@app.route('/trust')
+def trust():
+    return render_template('trust.html')
+
+
+@app.route('/contribute')
+def contribute():
+    return render_template('contribute.html')
+
+
 def refresh_credentials(credentials):
     print("Credentials have been expired, refreshing")
     refresh_request = google.auth.transport.requests.Request(session=AuthorizedSession(credentials))

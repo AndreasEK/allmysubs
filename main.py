@@ -72,6 +72,10 @@ def trust():
 def contribute():
     return render_template('contribute.html')
 
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
+
 
 def refresh_credentials(credentials):
     print("Credentials have been expired, refreshing")

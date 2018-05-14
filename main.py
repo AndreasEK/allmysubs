@@ -311,8 +311,8 @@ def oauth2callback():
 @app.route('/revoke')
 def revoke():
     if 'credentials' not in flask.session:
-        return ('You need to <a href="/authorize">authorize</a> before ' +
-                'testing the code to revoke credentials.')
+        return render_template('home.html', message='Nothing to revoke. You have not authorized ' +
+                'allmysubs to access Your YouTube profile yet.')
 
     credentials = google.oauth2.credentials.Credentials(
         **flask.session['credentials'])
@@ -323,6 +323,7 @@ def revoke():
 
     status_code = getattr(revoke, 'status_code')
     if status_code == 200:
+        del flask.session['credentials']
         return render_template('home.html', message='Credentials successfully revoked.')
     else:
         return render_template('home.html', message='An error occurred.')

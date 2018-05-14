@@ -1,3 +1,4 @@
+# coding=utf-8
 import logging
 import requests
 import flask
@@ -11,6 +12,7 @@ from datetime import datetime, timedelta
 from threading import Thread
 
 from google.auth.exceptions import RefreshError
+from google.appengine.runtime import DeadlineExceededError
 from google.auth.transport.requests import AuthorizedSession
 from requests_toolbelt.adapters import appengine
 from flask import Flask, render_template
@@ -251,22 +253,25 @@ def show_all_subs():
             del flask.session['credentials']
             return flask.redirect('authorize')
 
-
     youtube = googleapiclient.discovery.build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
 
     active_channel = read_active_channel(youtube)
 
-    print("Active channel ID", active_channel['id'])
-    subscribed_channel_ids, subscribed_channel_thumbnails = read_subscriptions(active_channel, youtube)
+    try:
+        print("Active channel ID", active_channel['id'])
+        subscribed_channel_ids, subscribed_channel_thumbnails = read_subscriptions(active_channel, youtube)
 
-    all_upload_playlists = read_upload_playlists(subscribed_channel_ids, youtube)
+        all_upload_playlists = read_upload_playlists(subscribed_channel_ids, youtube)
 
-    all_sorted_videos = read_latest_videos(all_upload_playlists, youtube)
+        all_sorted_videos = read_latest_videos(all_upload_playlists, youtube)
 
-    return render_template('subfeed.html',
-                           videos=all_sorted_videos,
-                           channel=active_channel,
-                           thumbs=subscribed_channel_thumbnails)
+        return render_template('subfeed.html',
+                               videos=all_sorted_videos,
+                               channel=active_channel,
+                               thumbs=subscribed_channel_thumbnails)
+    except DeadlineExceededError as dee:
+        return render_template('home.html', message='Sorry, this took longer than expected. Most of the results are ' +
+                               'probably already cached. Please try again. Thanks ❤️')
 
 
 @app.route('/authorize')

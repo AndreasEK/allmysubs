@@ -9,13 +9,14 @@ import googleapiclient.discovery
 
 from datetime import datetime, timedelta
 from threading import Thread
+
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import AuthorizedSession
 from requests_toolbelt.adapters import appengine
 from flask import Flask, render_template
 from flask_moment import Moment
 from werkzeug.contrib.cache import GAEMemcachedCache
 from secret_keys import CSRF_SECRET_KEY, SESSION_KEY
-
 
 appengine.monkeypatch()
 
@@ -245,7 +246,11 @@ def show_all_subs():
     print("Credentials expired? ", credentials.expired)
 
     if credentials.expired:
-        refresh_credentials(credentials)
+        try: refresh_credentials(credentials)
+        except RefreshError as e:
+            del flask.session['credentials']
+            return flask.redirect('authorize')
+
 
     youtube = googleapiclient.discovery.build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
 
